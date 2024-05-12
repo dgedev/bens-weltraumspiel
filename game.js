@@ -1,97 +1,118 @@
-// Konfiguration für das Spiel
 const config = {
-    type: Phaser.AUTO, // Phaser wählt automatisch die beste Render-Methode (Canvas oder WebGL)
-    width: 800, // Breite des Spielbereichs
-    height: 600, // Höhe des Spielbereichs
+    type: Phaser.AUTO,
+    width: window.innerWidth, // Anpassung an die Bildschirmbreite
+    height: window.innerHeight, // Anpassung an die Bildschirmhöhe
     physics: {
-        default: 'arcade', // Arcade-Physiksystem verwenden
+        default: 'arcade',
         arcade: {
-            debug: false // Debugging für die Physik deaktivieren
+            debug: false
         }
     },
     scene: {
-        preload: preload, // Preload-Funktion für das Laden von Assets
-        create: create, // Create-Funktion für das Erstellen von Objekten
-        update: update // Update-Funktion für die Spielaktualisierung
+        preload: preload,
+        create: create,
+        update: update
+    },
+    scale: {
+        mode: Phaser.Scale.RESIZE, // Automatische Anpassung der Spielgröße
+        autoCenter: Phaser.Scale.CENTER_BOTH // Zentriert das Spiel
     }
 };
 
-// Erstellung des Spielobjekts mit der obigen Konfiguration
 const game = new Phaser.Game(config);
-let player; // Variable für das Spielerschiff
-let cursors; // Variable für die Tastatursteuerung
-let star; // Variable für den Stern
-let score = 0; // Variable für den Punktestand
-let scoreText; // Variable für den Punktestand-Text
+let player;
+let cursors;
+let star;
+let score = 0;
+let scoreText;
+let targetPosition = null;
 
-// Preload-Funktion zum Laden der benötigten Assets
 function preload() {
-    this.load.image('sky', 'assets/sky.jpg'); // Hintergrundbild laden
-    this.load.image('ship', 'assets/ship.png'); // Bild des Spielerschiffs laden
-    this.load.image('star', 'assets/star.png'); // Bild des Sterns laden
+    // Hintergrund- und Spielerbilder laden
+    this.load.image('sky', 'assets/sky.jpg');
+    this.load.image('ship', 'assets/ship.png');
+    this.load.image('star', 'assets/star.png');
 }
 
-// Create-Funktion zum Erstellen der Spielobjekte und der grundlegenden Einstellungen
 function create() {
-    this.add.image(400, 300, 'sky'); // Hintergrundbild in der Mitte des Spielbereichs hinzufügen
+    // Hintergrundbild hinzufügen
+    this.add.image(window.innerWidth / 2, window.innerHeight / 2, 'sky').setDisplaySize(window.innerWidth, window.innerHeight);
 
-    // Spielerschiff hinzufügen und auf 100% skalieren
-    player = this.physics.add.sprite(400, 550, 'ship').setScale(1.0);
+    // Spielerschiff hinzufügen und skalieren
+    player = this.physics.add.sprite(window.innerWidth / 2, window.innerHeight - 100, 'ship').setScale(0.1);
     player.setCollideWorldBounds(true); // Verhindert, dass der Spieler aus dem Bildschirm geht
 
-    // Stern hinzufügen, zufällig positionieren, skalieren und Geschwindigkeit setzen
-    star = this.physics.add.sprite(Phaser.Math.Between(50, 750), 0, 'star').setScale(0.3);
-    star.setCollideWorldBounds(true); // Stern bleibt im Spielbereich
-    star.setBounce(1); // Stern prallt ab
-    star.setVelocity(0, 500); // Stern fällt mit einer Geschwindigkeit von 500 nach unten
+    // Stern hinzufügen
+    star = this.physics.add.sprite(Phaser.Math.Between(50, window.innerWidth - 50), 0, 'star').setScale(0.1);
+    star.setCollideWorldBounds(true);
+    star.setBounce(1);
+    star.setVelocity(0, 200);
 
-    // Überprüfung der Überlappung zwischen Spieler und Stern, um Stern zu "fangen"
+    // Spieler und Stern Kollisions-Check
     this.physics.add.overlap(player, star, catchStar, null, this);
 
-    // Tastatursteuerung initialisieren
+    // Eingabe-Events
     cursors = this.input.keyboard.createCursorKeys();
 
-    // Punkteanzeige erstellen
-    scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#FFF' });
+    // Punkteanzeige
+    scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#FFF' }).setScrollFactor(0);
+
+    // Touch-Eingaben hinzufügen
+    this.input.on('pointerdown', function (pointer) {
+        targetPosition = { x: pointer.x, y: pointer.y };
+    }, this);
 }
 
-// Update-Funktion, die in jedem Frame aufgerufen wird, um das Spiel zu aktualisieren
 function update() {
-    // Spielerbewegung basierend auf den Pfeiltasten
+    // Spielerbewegung - Tastatur
     if (cursors.left.isDown) {
-        player.setVelocityX(-400); // Bewegung nach links
+        player.setVelocityX(-400);
     } else if (cursors.right.isDown) {
-        player.setVelocityX(400); // Bewegung nach rechts
-    } else {
-        player.setVelocityX(0); // Keine horizontale Bewegung
+        player.setVelocityX(400);
+    } else if (!targetPosition) {
+        player.setVelocityX(0);
     }
 
     if (cursors.up.isDown) {
-        player.setVelocityY(-400); // Bewegung nach oben
-    } else if (cursors.down.isDown){
-        player.setVelocityY(400); // Bewegung nach unten
-    } else {
-        player.setVelocityY(0); // Keine vertikale Bewegung
+        player.setVelocityY(-400);
+    } else if (cursors.down.isDown) {
+        player.setVelocityY(400);
+    } else if (!targetPosition) {
+        player.setVelocityY(0);
     }
 
-    // Überprüfen, ob der Stern den Boden erreicht hat
-    if (star.y > 600) {
-        resetStar(); // Stern zurücksetzen, wenn er den Boden erreicht
+    // Spielerbewegung - Touch
+    if (targetPosition) {
+        if (Phaser.Math.Distance.Between(player.x, player.y, targetPosition.x, targetPosition.y) < 5) {
+            player.setVelocity(0);
+            targetPosition = null;
+        } else {
+            this.physics.moveToObject(player, targetPosition, 400);
+        }
+    }
+
+    // Wenn der Stern den Boden erreicht, zurücksetzen
+    if (star.y > window.innerHeight) {
+        resetStar();
     }
 }
 
-// Funktion, die aufgerufen wird, wenn der Spieler den Stern "fängt"
 function catchStar(player, star) {
-    resetStar(); // Stern zurücksetzen
+    // Stern "fangen"
+    resetStar();
 
-    // Punktestand erhöhen
+    // Punkte erhöhen
     score += 10;
-    scoreText.setText('Score: ' + score); // Aktualisieren der Punkteanzeige
+    scoreText.setText('Score: ' + score);
 }
 
-// Funktion zum Zurücksetzen des Sterns
 function resetStar() {
-    // Stern an eine zufällige Position oben setzen und Geschwindigkeit nach unten setzen
-    star.setPosition(Phaser.Math.Between(50, 750), 0);
-    star.setVelocity(0, 500);
+    // Stern zurücksetzen
+    star.setPosition(Phaser.Math.Between(50, window.innerWidth - 50), 0);
+    star.setVelocity(0, 200);
 }
+
+// Event Listener, um das Spiel bei Größenänderungen des Fensters anzupassen
+window.addEventListener('resize', () => {
+    game.scale.resize(window.innerWidth, window.innerHeight);
+});
