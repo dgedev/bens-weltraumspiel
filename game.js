@@ -39,11 +39,11 @@ function create() {
     this.add.image(window.innerWidth / 2, window.innerHeight / 2, 'sky').setDisplaySize(window.innerWidth, window.innerHeight);
 
     // Spielerschiff hinzufügen und skalieren
-    player = this.physics.add.sprite(window.innerWidth / 2, window.innerHeight - 100, 'ship').setScale(0.1);
+    player = this.physics.add.sprite(window.innerWidth / 2, window.innerHeight - 100, 'ship').setScale(1.7);
     player.setCollideWorldBounds(true); // Verhindert, dass der Spieler aus dem Bildschirm geht
 
     // Stern hinzufügen
-    star = this.physics.add.sprite(Phaser.Math.Between(50, window.innerWidth - 50), 0, 'star').setScale(0.1);
+    star = this.physics.add.sprite(Phaser.Math.Between(50, window.innerWidth - 50), 0, 'star').setScale(1.2);
     star.setCollideWorldBounds(true);
     star.setBounce(1);
     star.setVelocity(0, 200);
